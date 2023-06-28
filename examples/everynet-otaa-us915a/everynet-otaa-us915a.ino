@@ -57,17 +57,21 @@
 // first. When copying an EUI from ttnctl output, this means to reverse
 // the bytes. For TTN issued EUIs the last bytes should be 0xD5, 0xB3,
 // 0x70.
-static const u1_t PROGMEM APPEUI[8]= { FILLMEIN };
+
+// everynet: 49 67 47 AE 28 94 DA 24
+static const u1_t PROGMEM APPEUI[8]= { 0x49, 0x67, 0x47, 0xAE, 0x28, 0x94, 0xDA, 0x24};
 void os_getArtEui (u1_t* buf) { memcpy_P(buf, APPEUI, 8);}
 
+// everynet: 8F 2E 78 CC D6 18 70 D8
 // This should also be in little endian format, see above.
-static const u1_t PROGMEM DEVEUI[8]= { FILLMEIN };
+static const u1_t PROGMEM DEVEUI[8]= { 0x8F, 0x2E, 0x78, 0xCC, 0xD6, 0x18, 0x70, 0xD8 };
 void os_getDevEui (u1_t* buf) { memcpy_P(buf, DEVEUI, 8);}
 
 // This key should be in big endian format (or, since it is not really a
 // number but a block of memory, endianness does not really apply). In
 // practice, a key taken from the TTN console can be copied as-is.
-static const u1_t PROGMEM APPKEY[16] = { FILLMEIN };
+// everynet: 9f 89 bd 9f 85 f5 f7 55 8d 13 c8 1c 4f 8a 02 6e
+static const u1_t PROGMEM APPKEY[16] = { 0x9F, 0x89, 0xBD, 0x9F, 0x85, 0xF5, 0xF7, 0x55, 0x8D, 0x13, 0xC8, 0x1C, 0x4F, 0x8A, 0x02, 0x6E };
 void os_getDevKey (u1_t* buf) {  memcpy_P(buf, APPKEY, 16);}
 
 static uint8_t mydata[] = "Hello, world!";
@@ -75,7 +79,7 @@ static osjob_t sendjob;
 
 // Schedule TX every this many seconds (might become longer due to duty
 // cycle limitations).
-const unsigned TX_INTERVAL = 60;
+const unsigned TX_INTERVAL = 15;
 
 
 void printHex2(unsigned v) {
@@ -281,7 +285,9 @@ void setup() {
 #if CFG_LMIC_US_like
     // This makes joins faster in the US because we don't wander all over the
     // spectrum.
-    LMIC_selectSubBand(1);
+    bit_t result = LMIC_selectSubBand(0);
+    Serial.print("LMIC_selectSubBand(0) result: ");
+    Serial.println(result, HEX);
 #endif
 
     // Start job (sending automatically starts OTAA too)
