@@ -38,6 +38,8 @@
 #include <hal/hal.h>
 #include <SPI.h>
 #include <arduino_lmic_hal_boards.h>
+#include "ArduinoLowPower.h"
+#include <RTCZero.h>
 
 //
 // For normal use, we require that you edit the sketch to replace FILLMEIN
@@ -88,14 +90,49 @@ static osjob_t sendjob;
 
 // Schedule TX every this many seconds (might become longer due to duty
 // cycle limitations).
-const unsigned TX_INTERVAL = 60;
+const unsigned TX_INTERVAL = 15;
 
+/* Create an RTCZero object */
+RTCZero rtc_sleep;
 
 void printHex2(unsigned v) {
     v &= 0xff;
     if (v < 16)
         Serial.print('0');
     Serial.print(v, HEX);
+}
+
+const lmic_pinmap lmic_pins = {
+  .nss = 8,
+  .rxtx = LMIC_UNUSED_PIN,
+  //.rst = 4,
+  .rst = LMIC_UNUSED_PIN,
+  .dio = {3, 6, LMIC_UNUSED_PIN},
+  .rxtx_rx_active = 0,
+  .rssi_cal = 8,              // LBT cal for the Adafruit Feather M0 LoRa, in dB
+  .spi_freq = 8000000,
+};
+
+void goToSleep (int sleep_time) {
+  rtc_sleep.setEpoch(0);            // Probably not needed..
+  
+  long unsigned int curr_time = rtc_sleep.getEpoch();               // Start deep sleep epoch
+  long unsigned int wake_up_time = curr_time + sleep_time;        // End deep sleep epoch
+
+  // Auxiliary variable needed in case the deepSleep function is stopped by an interrupt
+  long unsigned int sleep_time_left = sleep_time;
+
+  while (curr_time < wake_up_time) {
+    sleep_time_left = wake_up_time - curr_time;      
+    
+    if (sleep_time_left > 0) {
+      LowPower.deepSleep(sleep_time_left * 1000);   // * 1000 poiché il tempo qua è in ms
+    } else {
+      wake_up_time = 0;
+    }
+    
+    curr_time = rtc_sleep.getEpoch();
+  }
 }
 
 void onEvent (ev_t ev) {
@@ -174,7 +211,10 @@ void onEvent (ev_t ev) {
               Serial.println(F(" bytes of payload"));
             }
             // Schedule next transmission
-            os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(TX_INTERVAL), do_send);
+//            os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(TX_INTERVAL), do_send);
+            // Call deep sleep function
+            goToSleep(TX_INTERVAL);
+            do_send(&sendjob);
             break;
         case EV_LOST_TSYNC:
             Serial.println(F("EV_LOST_TSYNC"));
@@ -236,6 +276,9 @@ void setup() {
     delay(5000);
     Serial.begin(9600);
     Serial.println(F("Starting"));
+
+    rtc_sleep.begin();
+    rtc_sleep.setEpoch(0);
 
     #ifdef VCC_ENABLE
     // For Pinoccio Scout boards
