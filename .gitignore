@@ -46,3 +46,5 @@ __vm
 
 # files from vscode
 .vscode
+
+build/
