@@ -90,7 +90,9 @@ static osjob_t sendjob;
 
 // Schedule TX every this many seconds (might become longer due to duty
 // cycle limitations).
-const unsigned TX_INTERVAL = 15;
+const unsigned MIN_TX_INTERVAL = 10;
+const unsigned MAX_TX_INTERVAL = 3600;
+unsigned curr_tx_interval = MIN_TX_INTERVAL;
 
 /* Create an RTCZero object */
 RTCZero rtc_sleep;
@@ -213,7 +215,18 @@ void onEvent (ev_t ev) {
             // Schedule next transmission
 //            os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(TX_INTERVAL), do_send);
             // Call deep sleep function
-            goToSleep(TX_INTERVAL);
+            Serial.print("About to go to sleep for ");
+            Serial.print(curr_tx_interval, DEC);
+            Serial.println(" seconds");
+            goToSleep(curr_tx_interval);
+	    // (Re)open the Serial port (since we have returned from deep sleep)
+    	      Serial.begin(9600);
+            if (curr_tx_interval < MAX_TX_INTERVAL) {
+              curr_tx_interval <<= 1;
+              if (curr_tx_interval > MAX_TX_INTERVAL) {
+                curr_tx_interval = MAX_TX_INTERVAL;
+              }
+            }
             do_send(&sendjob);
             break;
         case EV_LOST_TSYNC:
