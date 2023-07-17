@@ -274,6 +274,12 @@ void do_send(osjob_t* j){
 
 void setup() {
     delay(5000);
+
+    // Add an additional 25 seconds of 'startup delay', to enable programming/updates via the serial cable
+    if (Serial) {
+      delay(25000);
+    }
+
     Serial.begin(9600);
     Serial.println(F("Starting"));
 
@@ -330,7 +336,10 @@ void setup() {
     LMIC_setClockError(1 * MAX_CLOCK_ERROR / 40);
 
     LMIC_setLinkCheckMode(0);
-    LMIC_setDrTxpow(DR_SF7,14);
+    LMIC_setDrTxpow(DR_SF10,20);
+
+    // Disable ADR
+    LMIC_setAdrMode(0);
 
 #if CFG_LMIC_US_like
     // This makes joins faster in the US because we don't wander all over the
@@ -339,6 +348,10 @@ void setup() {
     Serial.print("LMIC_selectSubBand(1) result: ");
     Serial.println(result, HEX);
 #endif
+
+    // Turn the Builtin LED off
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, 0);
 
     // Start job (sending automatically starts OTAA too)
     do_send(&sendjob);
