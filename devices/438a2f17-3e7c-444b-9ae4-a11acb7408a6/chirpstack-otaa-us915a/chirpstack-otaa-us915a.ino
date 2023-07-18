@@ -1,3 +1,4 @@
+
 /*******************************************************************************
  * Copyright (c) 2015 Thomas Telkamp and Matthijs Kooijman
  * Copyright (c) 2018 Terry Moore, MCCI
@@ -39,6 +40,7 @@
 #include <SPI.h>
 #include <arduino_lmic_hal_boards.h>
 #include "ArduinoLowPower.h"
+#include "zeppylin-arduino-lorawan.h"
 #include <RTCZero.h>
 
 //
@@ -65,13 +67,13 @@
 // chirpstack: 4C 12 F8 12 13 84 5C 37
 // chirpstack: EF F2 C9 E9 36 90 54 C1
 // chirpstack: 83 79 AB D5 ED 72 44 98
-static const u1_t PROGMEM APPEUI[8]= { 0xEF, 0xF2, 0xC9, 0xE9, 0x36, 0x90, 0x54, 0xC1};
+static u1_t PROGMEM APPEUI[8]= { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 void os_getArtEui (u1_t* buf) { memcpy_P(buf, APPEUI, 8);}
 
 // chirpstack: 01 C4 1A 5E E5 38 C7 98
 // chirpstack: E5 9E B5 7D FD E1 A8 46
 // This should also be in little endian format, see above.
-static const u1_t PROGMEM DEVEUI[8]= { 0xEF, 0xF2, 0xC9, 0xE9, 0x36, 0x90, 0x54, 0xC1};
+static u1_t PROGMEM DEVEUI[8]= { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 void os_getDevEui (u1_t* buf) { memcpy_P(buf, DEVEUI, 8);}
 
 // This key should be in big endian format (or, since it is not really a
@@ -82,7 +84,7 @@ void os_getDevEui (u1_t* buf) { memcpy_P(buf, DEVEUI, 8);}
 // chirpstack: 0xB6, 0x52, 0xE9, 0x35, 0xFF, 0x55, 0x69, 0x65, 0x39, 0x58, 0x3C, 0xC4, 0xF9, 0xC4, 0x4A, 0x61
 // chirpstack: 0x48, 0xF8, 0x32, 0xA5, 0xE3, 0x71, 0x98, 0x23, 0xC9, 0x46, 0xF4, 0x03, 0xF4, 0xB5, 0xAE, 0xA9
 // chirpstack: 0xFD, 0xE6, 0x8C, 0xB1, 0x37, 0x47, 0x0C, 0x7B, 0xEA, 0x21, 0x17, 0x13, 0x6A, 0x83, 0x8D, 0xD2
-static const u1_t PROGMEM APPKEY[16] = { 0x48, 0xF8, 0x32, 0xA5, 0xE3, 0x71, 0x98, 0x23, 0xC9, 0x46, 0xF4, 0x03, 0xF4, 0xB5, 0xAE, 0xA9 };
+static u1_t PROGMEM APPKEY[16] = { };
 void os_getDevKey (u1_t* buf) {  memcpy_P(buf, APPKEY, 16);}
 
 static uint8_t mydata[] = "Hello, world!";
@@ -96,6 +98,9 @@ unsigned curr_tx_interval = MIN_TX_INTERVAL;
 
 /* Create an RTCZero object */
 RTCZero rtc_sleep;
+
+// Init the zeppylin-arduino-lorawan (secrets + config) object
+ZeppylinArduinoLoRaWAN zeppylin_arduino_lorawan;
 
 void printHex2(unsigned v) {
     v &= 0xff;
@@ -295,6 +300,9 @@ void setup() {
 
     Serial.begin(9600);
     Serial.println(F("Starting"));
+
+    // Initialize the APPEUI, DEVEUI and APPKEYs (from a custom instance of the ZeppylinArduinoLoraWAN library)
+    zeppylin_arduino_lorawan.initialize_secrets(&APPEUI[0], &DEVEUI[0], &APPKEY[0]);
 
     rtc_sleep.begin();
     rtc_sleep.setEpoch(0);
